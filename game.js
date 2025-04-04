@@ -88,6 +88,8 @@ class GameScene extends Phaser.Scene {
             repeat: -1
         });
 
+        
+
         let background = this.add.tileSprite(
             this.scale.width / 2,  // Центруємо по X
             this.scale.height / 2, // Центруємо по Y
@@ -95,7 +97,8 @@ class GameScene extends Phaser.Scene {
             this.scale.height,     // Розмір у висоту (весь екран)
             'backgroundGamePlace'  // ID текстури
         ).setOrigin(0.5, 0.5); // Центруємо
-        background.setTint(0x8CA2E9);
+        //background.setTint(0x8CA2E9);
+
 
         this.cellSize = 40; // Розмір однієї клітинки лабіринту
         this.cols = Math.floor(this.scale.width / this.cellSize);
@@ -115,7 +118,11 @@ class GameScene extends Phaser.Scene {
         this.player.setScale(this.cellSize / 170);
         this.playerFeet.setOrigin(0.5, 0.5);
         this.playerFeet.setScale(this.cellSize / 290);
-        
+
+        // Добавляем круг для подсветки
+        this.glowEffect = this.add.circle(this.player.x, this.player.y, 45, 0xFFEFB6, 0.3); // полупрозрачный зеленый круг
+        this.glowEffect.setOrigin(0.5, 0.5);
+       
         
         this.keybtn = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.UP,
@@ -187,7 +194,7 @@ class GameScene extends Phaser.Scene {
                         y * this.cellSize + this.cellSize / 2,
                         'wallTexture'
                     ).setDisplaySize(this.cellSize, this.cellSize);
-                    //wall.setTint(0x00FF44);
+                    wall.setTint(0x00FF11);
                 }
 
                 if (this.grid[y][x] === 2) {
@@ -245,6 +252,8 @@ class GameScene extends Phaser.Scene {
         
         let newX = this.player.x + moveX;
         let newY = this.player.y + moveY;
+        // Обновляем позицию круга для подсветки
+        this.glowEffect.setPosition(this.player.x, this.player.y);
 
         if (this.checkCollision(newX, newY)) {
             this.player.x = newX;
