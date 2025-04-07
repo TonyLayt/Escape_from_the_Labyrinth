@@ -61,6 +61,7 @@ class GameScene extends Phaser.Scene {
         this.load.image('backgroundGamePlace', 'assets/floor4.png');
         this.load.image('wallTexture', 'assets/foliage3.png');
         this.load.image ('door', 'assets/door.png');
+        this.load.image('light', 'assets/light.png');
 
     }
 
@@ -106,11 +107,26 @@ class GameScene extends Phaser.Scene {
         
         this.grid = this.generateMaze(this.cols, this.rows);
 
-        this.drawMaze(); 
+        this.drawMaze();
+        
+        let mapWidth = this.cellSize * this.cols;
+        let mapHeight = this.cellSize * this.rows;
 
         //this.player = this.add.circle(this.cellSize / 2, this.cellSize * 1.5, this.cellSize / 5, 0xff0000);
+
+        // Добавляем круг для подсветки
+        //this.glowEffect = this.add.circle(this.cellSize / 2 + 25, this.cellSize * 1.5, 38, 0xFFEFB6, 0.1); // полупрозрачный зеленый круг
+        //this.glowEffect.setOrigin(0.5, 0.5);
+
         
         this.playerFeet = this.add.sprite(this.cellSize / 2, this.cellSize * 1.5, 'frameMoveFeet1');
+
+        this.glowEffect = this.add.image(this.cellSize / 2 + 85, this.cellSize * 1.5, 'light');
+        this.glowEffect.setScale(0.3); 
+        this.glowEffect.setAlpha(0.2); // Прозрачность
+        this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
+        //this.glowEffect.setDepth(-1); // Чтобы было позади игро
+
         this.player = this.add.sprite(this.cellSize / 2, this.cellSize * 1.5, 'frameMove1');
         
         //this.player.play('walk');
@@ -118,12 +134,13 @@ class GameScene extends Phaser.Scene {
         this.player.setScale(this.cellSize / 170);
         this.playerFeet.setOrigin(0.5, 0.5);
         this.playerFeet.setScale(this.cellSize / 290);
-
-        // Добавляем круг для подсветки
-        this.glowEffect = this.add.circle(this.player.x, this.player.y, 45, 0xFFEFB6, 0.3); // полупрозрачный зеленый круг
-        this.glowEffect.setOrigin(0.5, 0.5);
-       
         
+        //камера
+        this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
+        this.cameras.main.setZoom(1.7);
+        this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+        
+
         this.keybtn = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.UP,
             down: Phaser.Input.Keyboard.KeyCodes.DOWN,
@@ -221,12 +238,17 @@ class GameScene extends Phaser.Scene {
             this.player.setRotation(Phaser.Math.DegToRad(90)); // Поворот вниз
             this.playerFeet.play('feetmove', true);
             this.playerFeet.setRotation(Phaser.Math.DegToRad(90));
+            this.glowEffect.setPosition(this.player.x, this.player.y + 85);
+            this.glowEffect.setRotation(Phaser.Math.DegToRad(0));
+            
         } else if (this.keybtn.up.isDown) {
             moveY = -4;
             this.player.play('walk', true); // Запускаем анимацию
             this.player.setRotation(Phaser.Math.DegToRad(-90)); // Поворот вверх
             this.playerFeet.play('feetmove', true);
             this.playerFeet.setRotation(Phaser.Math.DegToRad(-90));
+            this.glowEffect.setPosition(this.player.x, this.player.y - 85);
+            this.glowEffect.setRotation(Phaser.Math.DegToRad(180));
         }
     
         // Двигаем персонажа по X
@@ -236,12 +258,16 @@ class GameScene extends Phaser.Scene {
             this.player.setRotation(Phaser.Math.DegToRad(0)); // Поворот вправо
             this.playerFeet.play('feetmove', true);
             this.playerFeet.setRotation(Phaser.Math.DegToRad(0));
+            this.glowEffect.setPosition(this.player.x + 85, this.player.y);
+            this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
         } else if (this.keybtn.left.isDown) {
             moveX = -4;
             this.player.play('walk', true); // Запускаем анимацию
             this.player.setRotation(Phaser.Math.DegToRad(180)); // Поворот влево
             this.playerFeet.play('feetmove', true);
             this.playerFeet.setRotation(Phaser.Math.DegToRad(180));
+            this.glowEffect.setPosition(this.player.x - 85, this.player.y);
+            this.glowEffect.setRotation(Phaser.Math.DegToRad(90));
         }
     
         // Остановка анимации, если персонаж не двигается
@@ -253,7 +279,7 @@ class GameScene extends Phaser.Scene {
         let newX = this.player.x + moveX;
         let newY = this.player.y + moveY;
         // Обновляем позицию круга для подсветки
-        this.glowEffect.setPosition(this.player.x, this.player.y);
+        //this.glowEffect.setPosition(this.player.x + 25, this.player.y);
 
         if (this.checkCollision(newX, newY)) {
             this.player.x = newX;
@@ -339,7 +365,7 @@ const config = {
         width: 1280,
         height: 720
     },
-    scene: [MenuScene, GameScene, WinScene]
+    scene: [GameScene, MenuScene,  WinScene]
 };
 
 const game = new Phaser.Game(config);
