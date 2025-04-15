@@ -57,6 +57,9 @@ class GameScene extends Phaser.Scene {
             this.load.image(`frameMoveFeet${i}`, `assets/player/feet/run_${i}.png`);
         }
 
+        for (let i = 1; i <= 19; i++) {
+            this.load.image(`idle${i}`, `assets/player/idle/idle_${i}.png`);
+        }
 
         this.load.image('backgroundGamePlace', 'assets/floor4.png');
         this.load.image('wallTexture', 'assets/foliage3.png');
@@ -67,13 +70,22 @@ class GameScene extends Phaser.Scene {
 
     
     create() {
-
+        
+        let idlePlayerFrame = [];
         let movePlayerFrame = [];
         let movePlayerFeetFrame = [];
         for (let i = 1; i <= 19; i++) {
             movePlayerFrame.push({ key: `frameMove${i}` });
             movePlayerFeetFrame.push({ key: `frameMoveFeet${i}` });
+            idlePlayerFrame.push({ key: `idle${i}` });
         }
+
+        this.anims.create({
+            key: 'idle',
+            frames: idlePlayerFrame, // Передаем массив кадров
+            frameRate: 10,
+            repeat: -1
+        });
 
         this.anims.create({
             key: 'walk',
@@ -89,58 +101,64 @@ class GameScene extends Phaser.Scene {
             repeat: -1
         });
 
-        
-
-        let background = this.add.tileSprite(
-            this.scale.width / 2,  // Центруємо по X
-            this.scale.height / 2, // Центруємо по Y
-            this.scale.width,      // Розмір у ширину (весь екран)
-            this.scale.height,     // Розмір у висоту (весь екран)
-            'backgroundGamePlace'  // ID текстури
-        ).setOrigin(0.5, 0.5); // Центруємо
-        //background.setTint(0x8CA2E9);
-
 
         this.cellSize = 40; // Розмір однієї клітинки лабіринту
-        this.cols = Math.floor(this.scale.width / this.cellSize);
-        this.rows = Math.floor(this.scale.height / this.cellSize);
         
-        this.grid = this.generateMaze(this.cols, this.rows);
+        let lvlsizeX = 10; // Розмір лабіринту
+        let lvlsizeY = 10;
 
-        this.drawMaze();
+        this.cols = Math.floor(this.scale.width / this.cellSize) + lvlsizeY;
+        this.rows = Math.floor(this.scale.height / this.cellSize) + lvlsizeX;
+         
+        this.grid = this.generateMaze(this.cols, this.rows);
         
+        // размер всей карти 
         let mapWidth = this.cellSize * this.cols;
         let mapHeight = this.cellSize * this.rows;
+
+        let bgTilesX = Math.ceil(mapWidth / 1024);
+        let bgTilesY = Math.ceil(mapHeight / 1024);
+
+
+        //рисуем бек фон по всей области
+        for (let countX = 0; countX < bgTilesX; countX++) {
+            for (let countY = 0; countY < bgTilesY; countY++) {
+                this.add.image(
+                    countX * 1024,
+                    countY * 1024,
+                    'backgroundGamePlace'
+                ).setOrigin(0, 0); // или 0.5, 0.5 — зависит от позиционирования
+            }
+        }
+
+        this.drawMaze();
 
         //this.player = this.add.circle(this.cellSize / 2, this.cellSize * 1.5, this.cellSize / 5, 0xff0000);
 
         // Добавляем круг для подсветки
         //this.glowEffect = this.add.circle(this.cellSize / 2 + 25, this.cellSize * 1.5, 38, 0xFFEFB6, 0.1); // полупрозрачный зеленый круг
         //this.glowEffect.setOrigin(0.5, 0.5);
-
-        
-        this.playerFeet = this.add.sprite(this.cellSize / 2, this.cellSize * 1.5, 'frameMoveFeet1');
+   
+        this.playerFeet = this.add.sprite(this.cellSize / 2, this.cellSize * 1.5);
 
         this.glowEffect = this.add.image(this.cellSize / 2 + 85, this.cellSize * 1.5, 'light');
         this.glowEffect.setScale(0.3); 
         this.glowEffect.setAlpha(0.2); // Прозрачность
         this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
-        //this.glowEffect.setDepth(-1); // Чтобы было позади игро
 
-        this.player = this.add.sprite(this.cellSize / 2, this.cellSize * 1.5, 'frameMove1');
+        this.player = this.add.sprite(this.cellSize / 2 + 30, this.cellSize * 1.5);
         
-        //this.player.play('walk');
         this.player.setOrigin(0.5, 0.5);
-        this.player.setScale(this.cellSize / 170);
+        this.player.setScale(this.cellSize / 280);
         this.playerFeet.setOrigin(0.5, 0.5);
         this.playerFeet.setScale(this.cellSize / 290);
+        //this.player.play('idle');
         
         //камера
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.setZoom(1.7);
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
         
-
         this.keybtn = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.UP,
             down: Phaser.Input.Keyboard.KeyCodes.DOWN,
@@ -153,6 +171,8 @@ class GameScene extends Phaser.Scene {
 
     generateMaze(cols, rows) {
         let maze = Array(rows).fill().map(() => Array(cols).fill(1)); // Заповнюємо стіни
+
+        //console.log(maze);
         let stack = [];
         let currentCell = { x: 0, y: 1 };
         
@@ -231,9 +251,10 @@ class GameScene extends Phaser.Scene {
     update(){
 
         let moveX = 0, moveY = 0;
-
+        
         if (this.keybtn.down.isDown) {
             moveY = 4;
+            
             this.player.play('walk', true); // Запускаем анимацию
             this.player.setRotation(Phaser.Math.DegToRad(90)); // Поворот вниз
             this.playerFeet.play('feetmove', true);
@@ -243,6 +264,7 @@ class GameScene extends Phaser.Scene {
             
         } else if (this.keybtn.up.isDown) {
             moveY = -4;
+            
             this.player.play('walk', true); // Запускаем анимацию
             this.player.setRotation(Phaser.Math.DegToRad(-90)); // Поворот вверх
             this.playerFeet.play('feetmove', true);
@@ -254,6 +276,7 @@ class GameScene extends Phaser.Scene {
         // Двигаем персонажа по X
         if (this.keybtn.right.isDown) {
             moveX = 4;
+            
             this.player.play('walk', true); // Запускаем анимацию
             this.player.setRotation(Phaser.Math.DegToRad(0)); // Поворот вправо
             this.playerFeet.play('feetmove', true);
@@ -262,6 +285,7 @@ class GameScene extends Phaser.Scene {
             this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
         } else if (this.keybtn.left.isDown) {
             moveX = -4;
+            
             this.player.play('walk', true); // Запускаем анимацию
             this.player.setRotation(Phaser.Math.DegToRad(180)); // Поворот влево
             this.playerFeet.play('feetmove', true);
@@ -272,7 +296,8 @@ class GameScene extends Phaser.Scene {
     
         // Остановка анимации, если персонаж не двигается
         if (moveX === 0 && moveY === 0) {
-            this.player.stop(); // Останавливаем анимацию, если нет движения
+            this.player.play('idle', true);
+            //this.player.stop(); // Останавливаем анимацию, если нет движения
             this.playerFeet.stop();
         }
         
@@ -365,7 +390,7 @@ const config = {
         width: 1280,
         height: 720
     },
-    scene: [GameScene, MenuScene,  WinScene]
+    scene: [MenuScene, GameScene,   WinScene]
 };
 
 const game = new Phaser.Game(config);
