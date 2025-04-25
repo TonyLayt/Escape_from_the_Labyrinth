@@ -5,9 +5,9 @@ class MenuScene extends Phaser.Scene {
 
     preload() {
         this.load.image('backgroundMain', 'assets/backgroundMain.webp');
-        this.load.image('StartButton', 'assets/BtnStartGame.svg');
-        this.load.image('BtnOptions', 'assets/BtnOptions.svg');
-        this.load.image('BtnExit', 'assets/BtnExit.svg');
+        this.load.image('StartButton', 'assets/HUD/BtnStartGame.svg');
+        this.load.image('BtnOptions', 'assets/HUD/BtnOptions.svg');
+        this.load.image('BtnExit', 'assets/HUD/BtnExit.svg');
     }
 
     create() {
@@ -47,9 +47,11 @@ class MenuScene extends Phaser.Scene {
 class GameScene extends Phaser.Scene {
     constructor() {
         super('GameScene');
+        this.pause = false;
     }
 
     preload() {
+
         for (let i = 1; i <= 19; i++) {
             this.load.image(`frameMove${i}`, `assets/player/move_${i}.png`);
         }
@@ -61,10 +63,16 @@ class GameScene extends Phaser.Scene {
             this.load.image(`idle${i}`, `assets/player/idle/idle_${i}.png`);
         }
 
+        this.load.image('btnMiniOptions', 'assets/HUD/btnMiniOptions.png');
         this.load.image('backgroundGamePlace', 'assets/floor4.png');
         this.load.image('wallTexture', 'assets/foliage3.png');
         this.load.image ('door', 'assets/door.png');
         this.load.image('light', 'assets/light.png');
+        this.load.image('backgroundPause', 'assets/HUD/BackMiniMenu.png');
+        this.load.image('btnContinue', 'assets/HUD/btnContinue.png');
+        this.load.image('btnOptions', 'assets/HUD/btnOptions.png');
+        this.load.image('btnArrowBack', 'assets/HUD/arrowBack.png');
+        
 
     }
 
@@ -127,17 +135,11 @@ class GameScene extends Phaser.Scene {
                     countX * 1024,
                     countY * 1024,
                     'backgroundGamePlace'
-                ).setOrigin(0, 0); // или 0.5, 0.5 — зависит от позиционирования
+                ).setOrigin(0, 0); 
             }
         }
 
-        this.drawMaze();
-
-        //this.player = this.add.circle(this.cellSize / 2, this.cellSize * 1.5, this.cellSize / 5, 0xff0000);
-
-        // Добавляем круг для подсветки
-        //this.glowEffect = this.add.circle(this.cellSize / 2 + 25, this.cellSize * 1.5, 38, 0xFFEFB6, 0.1); // полупрозрачный зеленый круг
-        //this.glowEffect.setOrigin(0.5, 0.5);
+        this.drawMaze();;
    
         this.playerFeet = this.add.sprite(this.cellSize / 2, this.cellSize * 1.5);
 
@@ -152,21 +154,29 @@ class GameScene extends Phaser.Scene {
         this.player.setScale(this.cellSize / 280);
         this.playerFeet.setOrigin(0.5, 0.5);
         this.playerFeet.setScale(this.cellSize / 290);
-        //this.player.play('idle');
-        
+
         //камера
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
         this.cameras.main.setZoom(1.7);
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
-        
+
+        this.btnMiniOptions = this.add.image(this.scale.width / 4.6, this.scale.height / 4.6, 'btnMiniOptions')
+            .setAlpha(0.7)
+            .setOrigin(0, 0)        // якорь в левом верхнем углу
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 150)
+            .setInteractive()
+            .on('pointerover', function () {this.setTint(0xBDBDBD);})
+            .on('pointerout', function () {this.clearTint();})
+            .on('pointerdown', () => {this.pauseGame(); this.btnMiniOptions.disableInteractive(); this.pause = true;});
+
         this.keybtn = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.UP,
             down: Phaser.Input.Keyboard.KeyCodes.DOWN,
             left: Phaser.Input.Keyboard.KeyCodes.LEFT,
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT
         });
-        
-           
+    
     }
 
     generateMaze(cols, rows) {
@@ -252,47 +262,50 @@ class GameScene extends Phaser.Scene {
 
         let moveX = 0, moveY = 0;
         
-        if (this.keybtn.down.isDown) {
-            moveY = 4;
+        if (this.pause == false){
+            if (this.keybtn.down.isDown) {
+                moveY = 4;
+                
+                this.player.play('walk', true); // Запускаем анимацию
+                this.player.setRotation(Phaser.Math.DegToRad(90)); // Поворот вниз
+                this.playerFeet.play('feetmove', true);
+                this.playerFeet.setRotation(Phaser.Math.DegToRad(90));
+                this.glowEffect.setPosition(this.player.x, this.player.y + 85);
+                this.glowEffect.setRotation(Phaser.Math.DegToRad(0));
+                
+            } else if (this.keybtn.up.isDown) {
+                moveY = -4;
+                
+                this.player.play('walk', true); // Запускаем анимацию
+                this.player.setRotation(Phaser.Math.DegToRad(-90)); // Поворот вверх
+                this.playerFeet.play('feetmove', true);
+                this.playerFeet.setRotation(Phaser.Math.DegToRad(-90));
+                this.glowEffect.setPosition(this.player.x, this.player.y - 85);
+                this.glowEffect.setRotation(Phaser.Math.DegToRad(180));
+            }
+        
+            // Двигаем персонажа по X
+            if (this.keybtn.right.isDown) {
+                moveX = 4;
+                
+                this.player.play('walk', true); // Запускаем анимацию
+                this.player.setRotation(Phaser.Math.DegToRad(0)); // Поворот вправо
+                this.playerFeet.play('feetmove', true);
+                this.playerFeet.setRotation(Phaser.Math.DegToRad(0));
+                this.glowEffect.setPosition(this.player.x + 85, this.player.y);
+                this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
+            } else if (this.keybtn.left.isDown) {
+                moveX = -4;
+                
+                this.player.play('walk', true); // Запускаем анимацию
+                this.player.setRotation(Phaser.Math.DegToRad(180)); // Поворот влево
+                this.playerFeet.play('feetmove', true);
+                this.playerFeet.setRotation(Phaser.Math.DegToRad(180));
+                this.glowEffect.setPosition(this.player.x - 85, this.player.y);
+                this.glowEffect.setRotation(Phaser.Math.DegToRad(90));
+            }
             
-            this.player.play('walk', true); // Запускаем анимацию
-            this.player.setRotation(Phaser.Math.DegToRad(90)); // Поворот вниз
-            this.playerFeet.play('feetmove', true);
-            this.playerFeet.setRotation(Phaser.Math.DegToRad(90));
-            this.glowEffect.setPosition(this.player.x, this.player.y + 85);
-            this.glowEffect.setRotation(Phaser.Math.DegToRad(0));
-            
-        } else if (this.keybtn.up.isDown) {
-            moveY = -4;
-            
-            this.player.play('walk', true); // Запускаем анимацию
-            this.player.setRotation(Phaser.Math.DegToRad(-90)); // Поворот вверх
-            this.playerFeet.play('feetmove', true);
-            this.playerFeet.setRotation(Phaser.Math.DegToRad(-90));
-            this.glowEffect.setPosition(this.player.x, this.player.y - 85);
-            this.glowEffect.setRotation(Phaser.Math.DegToRad(180));
-        }
-    
-        // Двигаем персонажа по X
-        if (this.keybtn.right.isDown) {
-            moveX = 4;
-            
-            this.player.play('walk', true); // Запускаем анимацию
-            this.player.setRotation(Phaser.Math.DegToRad(0)); // Поворот вправо
-            this.playerFeet.play('feetmove', true);
-            this.playerFeet.setRotation(Phaser.Math.DegToRad(0));
-            this.glowEffect.setPosition(this.player.x + 85, this.player.y);
-            this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
-        } else if (this.keybtn.left.isDown) {
-            moveX = -4;
-            
-            this.player.play('walk', true); // Запускаем анимацию
-            this.player.setRotation(Phaser.Math.DegToRad(180)); // Поворот влево
-            this.playerFeet.play('feetmove', true);
-            this.playerFeet.setRotation(Phaser.Math.DegToRad(180));
-            this.glowEffect.setPosition(this.player.x - 85, this.player.y);
-            this.glowEffect.setRotation(Phaser.Math.DegToRad(90));
-        }
+        } 
     
         // Остановка анимации, если персонаж не двигается
         if (moveX === 0 && moveY === 0) {
@@ -314,6 +327,7 @@ class GameScene extends Phaser.Scene {
         }
       
     }
+    
     
     // Проверка, можно ли идти на новую клетку (коллизия)
     checkCollision(x, y) {
@@ -342,8 +356,67 @@ class GameScene extends Phaser.Scene {
            
         });
     }
+
+    pauseGame(){
+
+            if (this.pause == false){
+                this.menuBackground = this.add.image(this.scale.width / 3, this.scale.height / 4.4, 'backgroundPause')
+                //.setAlpha(0.7)
+                .setOrigin(0, 0)        
+                .setScrollFactor(0)
+                .setScale(this.cellSize / 80);
+
+            }
+
+            this.btnContinue = this.add.image(this.scale.width / 2.2, this.scale.height / 3.3, 'btnContinue')
+            .setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 110)
+            .setInteractive()
+            .on('pointerover', function () {this.setTint(0xB8860B);})
+            .on('pointerout',  function () {this.clearTint();})
+            .on('pointerdown', () => {
+                this.menuBackground.destroy();
+                this.btnContinue.destroy();
+                this.btnOptions.destroy();
+                this.btnMiniOptions.setInteractive();
+                this.btnMiniOptions.clearTint();
+                this.pause = false;
+            });
+            
+            this.btnOptions = this.add.image(this.scale.width / 2.17, this.scale.height / 2.4, 'btnOptions')
+            .setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 80)
+            .setInteractive()
+            .on('pointerover', function () {this.setTint(0xB8860B);})
+            .on('pointerout',  function () {this.clearTint();})
+            .on('pointerdown', () => {
+                this.btnContinue.destroy();
+                this.btnOptions.destroy();
+                this.pauseOptions();
+            }); 
+
+    }; 
     
+    pauseOptions(){
+
+        this.btnArrowBack = this.add.image(this.scale.width / 2.7, this.scale.height / 3.6, 'btnArrowBack')
+            .setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 80)
+            .setInteractive()
+            .on('pointerover', function () {this.setTint(0xB8860B);})
+            .on('pointerout',  function () {this.clearTint();})
+            .on('pointerdown', () => {
+                this.btnArrowBack.destroy(); this.pauseGame();
+            });
+
+
+    }
 }
+
+
 
 class WinScene extends Phaser.Scene {
     constructor() {
@@ -353,9 +426,9 @@ class WinScene extends Phaser.Scene {
     preload(){
 
         this.load.image('backgroundGameWin', 'assets/backgroundGameWin.png');
-        this.load.image('btnExit', 'assets/btnExit.png');
-        this.load.image('btnTryAgain', 'assets/btnTryAgain.png');
-        this.load.image('btnNextLvl', 'assets/btnNextLvl.png');     
+        this.load.image('btnExit', 'assets/HUD/btnExit.png');
+        this.load.image('btnTryAgain', 'assets/HUD/btnTryAgain.png');
+        this.load.image('btnNextLvl', 'assets/HUD/btnNextLvl.png');     
     }
 
     create(){
@@ -390,7 +463,7 @@ const config = {
         width: 1280,
         height: 720
     },
-    scene: [MenuScene, GameScene,   WinScene]
+    scene: [MenuScene, GameScene, WinScene]
 };
 
 const game = new Phaser.Game(config);
