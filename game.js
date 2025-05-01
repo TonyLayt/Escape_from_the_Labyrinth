@@ -4,7 +4,7 @@ class MenuScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('backgroundMain', 'assets/backgroundMain.webp');
+        this.load.image('backgroundMain', 'assets/backgroundMain.png');
         this.load.image('StartButton', 'assets/HUD/BtnStartGame.svg');
         this.load.image('BtnOptions', 'assets/HUD/BtnOptions.svg');
         this.load.image('BtnExit', 'assets/HUD/BtnExit.svg');
@@ -15,9 +15,8 @@ class MenuScene extends Phaser.Scene {
         let centerY = this.scale.height / 2;
         let buttonSpacing = 100;
 
-        this.add.image(centerX, centerY, 'backgroundMain')
-            .setRotation(Phaser.Math.DegToRad(270))
-            .setDisplaySize(720, 1280);
+        this.add.image(centerX, centerY, 'backgroundMain');
+            
 
         let startButton = this.add.image(centerX, centerY - buttonSpacing, 'StartButton')
             .setInteractive()
@@ -31,12 +30,6 @@ class MenuScene extends Phaser.Scene {
         .setScale(0.5);
 
         addButtonEffects(settingsButton);
-
-        let exitButton = this.add.image(centerX, centerY + buttonSpacing, 'BtnExit')
-        .setInteractive()
-        .setScale(0.5);
-
-        addButtonEffects(exitButton);
 
         startButton.on('pointerdown', () => {
             this.scene.start('GameScene');
@@ -72,13 +65,20 @@ class GameScene extends Phaser.Scene {
         this.load.image('btnContinue', 'assets/HUD/btnContinue.png');
         this.load.image('btnOptions', 'assets/HUD/btnOptions.png');
         this.load.image('btnArrowBack', 'assets/HUD/arrowBack.png');
+        this.load.image('imgSoundEffects', 'assets/HUD/SoundEffects.png');
+        this.load.image('BtnExitPause', 'assets/HUD/btnExit2.png');
+        this.load.audio('steps', 'assets/sounds/step.mp3');
+        this.load.audio('les', 'assets/sounds/les.mp3');
         
 
     }
-
-    
+  
     create() {
-        
+        this.volumeLevel = 0.5;
+        this.stepSound = this.sound.add('steps');
+        this.lesSound = this.sound.add('les');
+        this.lesSound.play({volume: this.volumeLevel});
+        this.sliderThumbX = this.scale.width / 2;
         let idlePlayerFrame = [];
         let movePlayerFrame = [];
         let movePlayerFeetFrame = [];
@@ -124,22 +124,23 @@ class GameScene extends Phaser.Scene {
         let mapWidth = this.cellSize * this.cols;
         let mapHeight = this.cellSize * this.rows;
 
-        let bgTilesX = Math.ceil(mapWidth / 1024);
-        let bgTilesY = Math.ceil(mapHeight / 1024);
+        let bgTilesX = Math.ceil(mapWidth / 409);
+        let bgTilesY = Math.ceil(mapHeight / 409);
 
 
         //рисуем бек фон по всей области
         for (let countX = 0; countX < bgTilesX; countX++) {
             for (let countY = 0; countY < bgTilesY; countY++) {
                 this.add.image(
-                    countX * 1024,
-                    countY * 1024,
+                    countX * 409,
+                    countY * 409,
                     'backgroundGamePlace'
-                ).setOrigin(0, 0); 
+                ).setOrigin(0, 0).setScale(0.4); 
             }
         }
+        
 
-        this.drawMaze();;
+        this.drawMaze();
    
         this.playerFeet = this.add.sprite(this.cellSize / 2, this.cellSize * 1.5);
 
@@ -227,12 +228,12 @@ class GameScene extends Phaser.Scene {
                 if (this.grid[y][x] === 1) {
                     // Тень
                     let shadow = this.add.image(
-                        x * this.cellSize + this.cellSize / 2 + 8, // смещение тени по оси X
+                        x * this.cellSize + this.cellSize / 2, // смещение тени по оси X
                         y * this.cellSize + this.cellSize / 2 + 8, // смещение тени по оси Y
                         'wallTexture'
                     )
                     .setDisplaySize(this.cellSize, this.cellSize)
-                    .setAlpha(0.9); // полупрозрачная тень
+                    .setAlpha(0.5); // полупрозрачная тень
                     shadow.setTint(0x409459);
     
                     // Основное изображение
@@ -259,13 +260,19 @@ class GameScene extends Phaser.Scene {
     }
 
     update(){
-
-        let moveX = 0, moveY = 0;
         
+        let moveX = 0, moveY = 0;
+        this.SoundSettings = { volume: this.volumeLevel, rate: 1.2, seek: 0.5 };
+
         if (this.pause == false){
+            
             if (this.keybtn.down.isDown) {
                 moveY = 4;
-                
+
+                if (!this.stepSound.isPlaying){
+                    this.stepSound.play(this.SoundSettings);
+                }
+      
                 this.player.play('walk', true); // Запускаем анимацию
                 this.player.setRotation(Phaser.Math.DegToRad(90)); // Поворот вниз
                 this.playerFeet.play('feetmove', true);
@@ -276,6 +283,10 @@ class GameScene extends Phaser.Scene {
             } else if (this.keybtn.up.isDown) {
                 moveY = -4;
                 
+                if (!this.stepSound.isPlaying){
+                    this.stepSound.play(this.SoundSettings);
+                }
+
                 this.player.play('walk', true); // Запускаем анимацию
                 this.player.setRotation(Phaser.Math.DegToRad(-90)); // Поворот вверх
                 this.playerFeet.play('feetmove', true);
@@ -287,6 +298,10 @@ class GameScene extends Phaser.Scene {
             // Двигаем персонажа по X
             if (this.keybtn.right.isDown) {
                 moveX = 4;
+
+                if (!this.stepSound.isPlaying){
+                    this.stepSound.play(this.SoundSettings);
+                }
                 
                 this.player.play('walk', true); // Запускаем анимацию
                 this.player.setRotation(Phaser.Math.DegToRad(0)); // Поворот вправо
@@ -296,6 +311,10 @@ class GameScene extends Phaser.Scene {
                 this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
             } else if (this.keybtn.left.isDown) {
                 moveX = -4;
+
+                if (!this.stepSound.isPlaying){
+                    this.stepSound.play(this.SoundSettings);
+                }
                 
                 this.player.play('walk', true); // Запускаем анимацию
                 this.player.setRotation(Phaser.Math.DegToRad(180)); // Поворот влево
@@ -312,6 +331,7 @@ class GameScene extends Phaser.Scene {
             this.player.play('idle', true);
             //this.player.stop(); // Останавливаем анимацию, если нет движения
             this.playerFeet.stop();
+            this.stepSound.stop();
         }
         
         let newX = this.player.x + moveX;
@@ -347,7 +367,9 @@ class GameScene extends Phaser.Scene {
             let gridY = Math.floor(point.y / this.cellSize);
             
             if (this.grid[gridY] && this.grid[gridY][gridX]===2){
-
+                
+                this.stepSound.stop();
+                this.lesSound.stop();
                 this.scene.start('WinScene');
 
             }
@@ -358,7 +380,7 @@ class GameScene extends Phaser.Scene {
     }
 
     pauseGame(){
-
+            this.lesSound.stop();
             if (this.pause == false){
                 this.menuBackground = this.add.image(this.scale.width / 3, this.scale.height / 4.4, 'backgroundPause')
                 //.setAlpha(0.7)
@@ -379,8 +401,10 @@ class GameScene extends Phaser.Scene {
                 this.menuBackground.destroy();
                 this.btnContinue.destroy();
                 this.btnOptions.destroy();
+                this.btnExitPause.destroy();
                 this.btnMiniOptions.setInteractive();
                 this.btnMiniOptions.clearTint();
+                this.lesSound.play({volume: this.volumeLevel, seek: 1});
                 this.pause = false;
             });
             
@@ -394,12 +418,62 @@ class GameScene extends Phaser.Scene {
             .on('pointerdown', () => {
                 this.btnContinue.destroy();
                 this.btnOptions.destroy();
+                this.btnExitPause.destroy();
                 this.pauseOptions();
-            }); 
-
+            });
+            this.btnExitPause = this.add.image(this.scale.width / 2.15, this.scale.height / 1.95, 'BtnExitPause')
+            .setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 90)
+            .setInteractive()
+            .on('pointerover', function () {this.setTint(0xB8860B);})
+            .on('pointerout',  function () {this.clearTint();})
+            .on('pointerdown', () => {
+                this.btnExitPause.destroy();
+                this.menuBackground.destroy();
+                this.btnContinue.destroy();
+                this.btnOptions.destroy();
+                this.btnMiniOptions.setInteractive();
+                this.btnMiniOptions.clearTint();
+                this.pause = false;
+                this.scene.start('MenuScene');
+            });
+            
     }; 
+
+    createVolumeSlider(sliderLineX, sliderLineY, sliderThumbX, sliderThumbY, imgX, imgY, img){
+
+        this.imgSoundEffects = this.add.image(imgX, imgY, img)
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 80)
+
+        this.sliderLine = this.add.rectangle(sliderLineX, sliderLineY, 200, 5, 0xffffff)
+            .setScrollFactor(0)
+            .setAlpha(0.5)
+
+        this.sliderThumb = this.add.circle(sliderThumbX, sliderThumbY, 6, 0x7FFFD4)
+            .setScrollFactor(0)
+            .setAlpha(0.8)
+            .setInteractive();
+
+        this.input.setDraggable(this.sliderThumb);
+        this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
+            // Обмежуємо рух тільки по осі X у межах слайдера
+            const minX = this.sliderLine.x - this.sliderLine.width / 2;
+            const maxX = this.sliderLine.x + this.sliderLine.width / 2;
+    
+            gameObject.x = Phaser.Math.Clamp(dragX, minX, maxX);
+    
+            // Вираховуємо нову гучність (0 - 1)
+            const newVolume = (gameObject.x - minX) / this.sliderLine.width;
+            this.volumeLevel = newVolume;
+        });
+
+    }
     
     pauseOptions(){
+        
+        this.createVolumeSlider(this.scale.width / 2, this.scale.height / 2.5, this.sliderThumbX, this.scale.height / 2.5, this.scale.width / 2, this.scale.height / 2.8, 'imgSoundEffects');
 
         this.btnArrowBack = this.add.image(this.scale.width / 2.7, this.scale.height / 3.6, 'btnArrowBack')
             .setOrigin(0, 0)
@@ -409,10 +483,14 @@ class GameScene extends Phaser.Scene {
             .on('pointerover', function () {this.setTint(0xB8860B);})
             .on('pointerout',  function () {this.clearTint();})
             .on('pointerdown', () => {
-                this.btnArrowBack.destroy(); this.pauseGame();
+                this.btnArrowBack.destroy();
+                this.sliderLine.destroy();
+                this.sliderThumbX = this.sliderThumb.x;
+                this.sliderThumb.destroy();
+                this.imgSoundEffects.destroy()
+                this.pauseGame();
             });
-
-
+        
     }
 }
 
@@ -428,10 +506,12 @@ class WinScene extends Phaser.Scene {
         this.load.image('backgroundGameWin', 'assets/backgroundGameWin.png');
         this.load.image('btnExit', 'assets/HUD/btnExit.png');
         this.load.image('btnTryAgain', 'assets/HUD/btnTryAgain.png');
-        this.load.image('btnNextLvl', 'assets/HUD/btnNextLvl.png');     
+        this.load.image('btnNextLvl', 'assets/HUD/btnNextLvl.png');
+    
     }
 
     create(){
+
         this.add.image(this.scale.width / 2, this.scale.height / 2, 'backgroundGameWin')
             .setDisplaySize(1280, 720);
 
