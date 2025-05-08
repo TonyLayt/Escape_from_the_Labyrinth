@@ -1,3 +1,4 @@
+let firstPosTramble = 0;
 class MenuScene extends Phaser.Scene {
     constructor() {
         super('MenuScene');
@@ -13,12 +14,12 @@ class MenuScene extends Phaser.Scene {
     create() {
         let centerX = this.scale.width / 2;
         let centerY = this.scale.height / 2;
-        let buttonSpacing = 100;
+        firstPosTramble = centerX;
 
         this.add.image(centerX, centerY, 'backgroundMain');
             
 
-        let startButton = this.add.image(centerX, centerY - buttonSpacing, 'StartButton')
+        let startButton = this.add.image(centerX, centerY - 100, 'StartButton')
             .setInteractive()
             .setScale(0.5);
 
@@ -26,16 +27,24 @@ class MenuScene extends Phaser.Scene {
 
         
         let settingsButton = this.add.image(centerX, centerY, 'BtnOptions')
-        .setInteractive()
-        .setScale(0.5);
+            .setInteractive()
+            .setScale(0.5);
 
         addButtonEffects(settingsButton);
-
+        console.log ("1. ", firstPosTramble);
         startButton.on('pointerdown', () => {
+            //this.scale.startFullscreen();
             this.scene.start('GameScene');
         });
     }
 }
+let numlvl = 1;
+let lvlsizeX = 10; 
+let lvlsizeY = 10;
+
+let volumeLevel = 0.5;
+let sliderThumbX = 0;
+
 
 class GameScene extends Phaser.Scene {
     constructor() {
@@ -67,6 +76,7 @@ class GameScene extends Phaser.Scene {
         this.load.image('btnArrowBack', 'assets/HUD/arrowBack.png');
         this.load.image('imgSoundEffects', 'assets/HUD/SoundEffects.png');
         this.load.image('BtnExitPause', 'assets/HUD/btnExit2.png');
+        this.load.image('hudMonitor', 'assets/HUD/hud_monitor.png');
         this.load.audio('steps', 'assets/sounds/step.mp3');
         this.load.audio('les', 'assets/sounds/les.mp3');
         
@@ -74,11 +84,10 @@ class GameScene extends Phaser.Scene {
     }
   
     create() {
-        this.volumeLevel = 0.5;
         this.stepSound = this.sound.add('steps');
         this.lesSound = this.sound.add('les');
-        this.lesSound.play({volume: this.volumeLevel});
-        this.sliderThumbX = this.scale.width / 2;
+        this.lesSound.play({volume: volumeLevel});
+        //sliderThumbX = this.scale.width / 2;
         let idlePlayerFrame = [];
         let movePlayerFrame = [];
         let movePlayerFeetFrame = [];
@@ -112,9 +121,6 @@ class GameScene extends Phaser.Scene {
 
         this.cellSize = 40; // Розмір однієї клітинки лабіринту
         
-        let lvlsizeX = 10; // Розмір лабіринту
-        let lvlsizeY = 10;
-
         this.cols = Math.floor(this.scale.width / this.cellSize) + lvlsizeY;
         this.rows = Math.floor(this.scale.height / this.cellSize) + lvlsizeX;
          
@@ -135,7 +141,7 @@ class GameScene extends Phaser.Scene {
                     countX * 409,
                     countY * 409,
                     'backgroundGamePlace'
-                ).setOrigin(0, 0).setScale(0.4); 
+                ).setOrigin(0, 0).setScale(0.4).setTint(0xFAEBD7); 
             }
         }
         
@@ -170,7 +176,22 @@ class GameScene extends Phaser.Scene {
             .on('pointerover', function () {this.setTint(0xBDBDBD);})
             .on('pointerout', function () {this.clearTint();})
             .on('pointerdown', () => {this.pauseGame(); this.btnMiniOptions.disableInteractive(); this.pause = true;});
-
+        
+        //hudMonitor
+        // счетчик уровня
+        this.add.image(this.scale.width / 2, this.scale.height / 4.3, 'hudMonitor')
+            .setAlpha(0.6)      
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 150);
+        this.add.text(this.scale.width / 1.84, this.scale.height / 4.29, numlvl, {
+            fontSize: '24px',
+            color: '#000000',
+            fontFamily: 'Inknut Antiqua',
+            align: 'center'
+        }).setOrigin(0.5) 
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 80);
+        
         this.keybtn = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.UP,
             down: Phaser.Input.Keyboard.KeyCodes.DOWN,
@@ -229,11 +250,11 @@ class GameScene extends Phaser.Scene {
                     // Тень
                     let shadow = this.add.image(
                         x * this.cellSize + this.cellSize / 2, // смещение тени по оси X
-                        y * this.cellSize + this.cellSize / 2 + 8, // смещение тени по оси Y
+                        y * this.cellSize + this.cellSize / 2 + 10, // смещение тени по оси Y
                         'wallTexture'
                     )
                     .setDisplaySize(this.cellSize, this.cellSize)
-                    .setAlpha(0.5); // полупрозрачная тень
+                    .setAlpha(0.8); // полупрозрачная тень
                     shadow.setTint(0x409459);
     
                     // Основное изображение
@@ -262,7 +283,7 @@ class GameScene extends Phaser.Scene {
     update(){
         
         let moveX = 0, moveY = 0;
-        this.SoundSettings = { volume: this.volumeLevel, rate: 1.2, seek: 0.5 };
+        this.SoundSettings = { volume: volumeLevel, rate: 1.2, seek: 0.5 };
 
         if (this.pause == false){
             
@@ -404,7 +425,7 @@ class GameScene extends Phaser.Scene {
                 this.btnExitPause.destroy();
                 this.btnMiniOptions.setInteractive();
                 this.btnMiniOptions.clearTint();
-                this.lesSound.play({volume: this.volumeLevel, seek: 1});
+                this.lesSound.play({volume: volumeLevel, seek: 1});
                 this.pause = false;
             });
             
@@ -436,12 +457,15 @@ class GameScene extends Phaser.Scene {
                 this.btnMiniOptions.setInteractive();
                 this.btnMiniOptions.clearTint();
                 this.pause = false;
+                numlvl = 1;
+                lvlsizeX = 10; 
+                lvlsizeY = 10;
                 this.scene.start('MenuScene');
             });
             
     }; 
 
-    createVolumeSlider(sliderLineX, sliderLineY, sliderThumbX, sliderThumbY, imgX, imgY, img){
+    createVolumeSlider(sliderLineX, sliderLineY, setSliderThumbX, sliderThumbY, imgX, imgY, img){
 
         this.imgSoundEffects = this.add.image(imgX, imgY, img)
             .setScrollFactor(0)
@@ -451,12 +475,12 @@ class GameScene extends Phaser.Scene {
             .setScrollFactor(0)
             .setAlpha(0.5)
 
-        this.sliderThumb = this.add.circle(sliderThumbX, sliderThumbY, 6, 0x7FFFD4)
+        this.jetSliderThumb = this.add.circle(setSliderThumbX, sliderThumbY, 6, 0x7FFFD4)
             .setScrollFactor(0)
             .setAlpha(0.8)
             .setInteractive();
 
-        this.input.setDraggable(this.sliderThumb);
+        this.input.setDraggable(this.jetSliderThumb);
         this.input.on('drag', (pointer, gameObject, dragX, dragY) => {
             // Обмежуємо рух тільки по осі X у межах слайдера
             const minX = this.sliderLine.x - this.sliderLine.width / 2;
@@ -466,14 +490,14 @@ class GameScene extends Phaser.Scene {
     
             // Вираховуємо нову гучність (0 - 1)
             const newVolume = (gameObject.x - minX) / this.sliderLine.width;
-            this.volumeLevel = newVolume;
+            volumeLevel = newVolume;
         });
 
     }
     
     pauseOptions(){
-        
-        this.createVolumeSlider(this.scale.width / 2, this.scale.height / 2.5, this.sliderThumbX, this.scale.height / 2.5, this.scale.width / 2, this.scale.height / 2.8, 'imgSoundEffects');
+        if (sliderThumbX == 0){sliderThumbX = firstPosTramble};
+        this.createVolumeSlider(this.scale.width / 2, this.scale.height / 2.5, sliderThumbX, this.scale.height / 2.5, this.scale.width / 2, this.scale.height / 2.8, 'imgSoundEffects');
 
         this.btnArrowBack = this.add.image(this.scale.width / 2.7, this.scale.height / 3.6, 'btnArrowBack')
             .setOrigin(0, 0)
@@ -485,8 +509,8 @@ class GameScene extends Phaser.Scene {
             .on('pointerdown', () => {
                 this.btnArrowBack.destroy();
                 this.sliderLine.destroy();
-                this.sliderThumbX = this.sliderThumb.x;
-                this.sliderThumb.destroy();
+                sliderThumbX = this.jetSliderThumb.x;
+                this.jetSliderThumb.destroy();
                 this.imgSoundEffects.destroy()
                 this.pauseGame();
             });
@@ -514,22 +538,45 @@ class WinScene extends Phaser.Scene {
 
         this.add.image(this.scale.width / 2, this.scale.height / 2, 'backgroundGameWin')
             .setDisplaySize(1280, 720);
+        
+        this.add.text(this.scale.width / 2.2, this.scale.height / 2.65, numlvl, {
+            fontSize: '24px',
+            color: '#000000',
+            fontFamily: 'Inknut Antiqua',
+            align: 'center'
+        }).setOrigin(0.5) 
+            .setScale(1);
+
+        let btnNextLvl = this.add.image(this.scale.width / 2, this.scale.height / 1.5, 'btnNextLvl')
+            .setInteractive()
+            .setScale(0.5);
 
         let btnExit = this.add.image(this.scale.width / 3, this.scale.height / 1.3, 'btnExit')
-        .setInteractive()
-        .setScale(0.5);
+            .setInteractive()
+            .setScale(0.5);
 
         let btnTryAgain = this.add.image(this.scale.width / 1.46, this.scale.height / 1.3, 'btnTryAgain')
-        .setInteractive()
-        .setScale(0.5);
-
+            .setInteractive()
+            .setScale(0.5);
+        
+        addButtonEffects(btnNextLvl);
         addButtonEffects(btnExit);
         addButtonEffects(btnTryAgain);
 
         btnExit.on('pointerdown', () => {
+            numlvl = 1;
+            lvlsizeX = 10; 
+            lvlsizeY = 10;
             this.scene.start('MenuScene');
         });
         btnTryAgain.on('pointerdown', () => {
+            this.scene.start('GameScene');
+        });
+
+        btnNextLvl.on('pointerdown', () => {
+            numlvl++;
+            lvlsizeX += 10; 
+            lvlsizeY += 10;
             this.scene.start('GameScene');
         });
     }
@@ -548,9 +595,9 @@ const config = {
 
 const game = new Phaser.Game(config);
 
+
 function addButtonEffects(button) {
     button.on('pointerover', () => button.setScale(0.6).setTint(0xB8860B));
     button.on('pointerout', () => button.setScale(0.5).clearTint());
     button.on('pointerdown', () => button.setScale(0.5).setTint(0x008000));
 }
-
