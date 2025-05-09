@@ -66,8 +66,8 @@ class GameScene extends Phaser.Scene {
         }
 
         this.load.image('btnMiniOptions', 'assets/HUD/btnMiniOptions.png');
-        this.load.image('backgroundGamePlace', 'assets/floor4.png');
-        this.load.image('wallTexture', 'assets/foliage3.png');
+        this.load.image('backgroundGamePlace', 'assets/floor44.png');
+        this.load.image('wallTexture', 'assets/foliage33.png');
         this.load.image ('door', 'assets/door.png');
         this.load.image('light', 'assets/light.png');
         this.load.image('backgroundPause', 'assets/HUD/BackMiniMenu.png');
@@ -77,6 +77,9 @@ class GameScene extends Phaser.Scene {
         this.load.image('imgSoundEffects', 'assets/HUD/SoundEffects.png');
         this.load.image('BtnExitPause', 'assets/HUD/btnExit2.png');
         this.load.image('hudMonitor', 'assets/HUD/hud_monitor.png');
+        this.load.image('key', 'assets/item/Key.webp');
+        this.load.audio('upkey', 'assets/sounds/upkey.mp3');
+        this.load.audio('closedor', 'assets/sounds/closedor.mp3');
         this.load.audio('steps', 'assets/sounds/step.mp3');
         this.load.audio('les', 'assets/sounds/les.mp3');
         
@@ -84,10 +87,13 @@ class GameScene extends Phaser.Scene {
     }
   
     create() {
+        this.keySprites = [];
+        this.countKes = 0;
         this.stepSound = this.sound.add('steps');
         this.lesSound = this.sound.add('les');
+        this.upkeySound = this.sound.add('upkey');
+        this.closeDorSound = this.sound.add('closedor');
         this.lesSound.play({volume: volumeLevel});
-        //sliderThumbX = this.scale.width / 2;
         let idlePlayerFrame = [];
         let movePlayerFrame = [];
         let movePlayerFeetFrame = [];
@@ -130,18 +136,18 @@ class GameScene extends Phaser.Scene {
         let mapWidth = this.cellSize * this.cols;
         let mapHeight = this.cellSize * this.rows;
 
-        let bgTilesX = Math.ceil(mapWidth / 409);
-        let bgTilesY = Math.ceil(mapHeight / 409);
+        let bgTilesX = Math.ceil(mapWidth / 204);
+        let bgTilesY = Math.ceil(mapHeight / 204);
 
 
         //рисуем бек фон по всей области
         for (let countX = 0; countX < bgTilesX; countX++) {
             for (let countY = 0; countY < bgTilesY; countY++) {
                 this.add.image(
-                    countX * 409,
-                    countY * 409,
+                    countX * 204,
+                    countY * 204,
                     'backgroundGamePlace'
-                ).setOrigin(0, 0).setScale(0.4).setTint(0xFAEBD7); 
+                ).setOrigin(0, 0).setScale(0.2).setTint(0xFAEBD7); 
             }
         }
         
@@ -191,6 +197,14 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5) 
             .setScrollFactor(0)
             .setScale(this.cellSize / 80);
+        this.forUpdateCountKeys = this.add.text(this.scale.width / 2.12, this.scale.height / 4.29, this.countKes + "/2", {
+            fontSize: '24px',
+            color: '#000000',
+            fontFamily: 'Inknut Antiqua',
+            align: 'center'
+        }).setOrigin(0.5) 
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 80);
         
         this.keybtn = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.UP,
@@ -206,10 +220,10 @@ class GameScene extends Phaser.Scene {
 
         //console.log(maze);
         let stack = [];
-        let currentCell = { x: 0, y: 1 };
+        let currentCell = { x: 0, y: 1};
         
-        maze[currentCell.y][currentCell.x] = 0;
-        maze[rows - 2][cols - 2] = 2;
+        maze[currentCell.y][currentCell.x] = 0; // точка входу
+        maze[rows - 2][cols - 2] = 2; // двері
         stack.push(currentCell);
         
         while (stack.length > 0) {
@@ -227,6 +241,21 @@ class GameScene extends Phaser.Scene {
                 currentCell = stack.pop();
             }
         }
+        // Додаємо два ключі в лабіринт
+        let keysPlaced = 0;
+        let keynum = 2;
+
+        while (keysPlaced < keynum) {
+            let keyX = Phaser.Math.Between(1, cols - 2);
+            let keyY = Phaser.Math.Between(1, rows - 2);
+
+            // Ставимо ключ лише у прохідну клітинку (0), щоб не зіпсувати стіну
+            if (maze[keyY][keyX] === 0) {
+                maze[keyY][keyX] = 3; // 3 — ключ
+                keysPlaced++;
+            }
+        }
+
         return maze;
     }
 
@@ -263,7 +292,7 @@ class GameScene extends Phaser.Scene {
                         y * this.cellSize + this.cellSize / 2,
                         'wallTexture'
                     ).setDisplaySize(this.cellSize, this.cellSize);
-                    wall.setTint(0x00FF11);
+                    //wall.setTint(0x00FF11);
                 }
 
                 if (this.grid[y][x] === 2) {
@@ -274,6 +303,32 @@ class GameScene extends Phaser.Scene {
                         'door'
                     ).setDisplaySize(this.cellSize, this.cellSize);
                     door.setTint(0x868686);
+
+                } 
+                if (this.grid[y][x] === 3) {
+
+                    const key = this.add.image(
+                        x * this.cellSize + this.cellSize / 2,
+                        y * this.cellSize + this.cellSize / 2,
+                        'key'
+                    ).setDisplaySize(this.cellSize, this.cellSize);
+                    this.keySprites.push({sprite: key, y, x});
+
+                    let bright = true;
+
+                    // Анімація яскравості через зміну tint
+                    this.time.addEvent({
+                        delay: 800,
+                        loop: true,
+                        callback: () => {
+                            if (bright) {
+                                key.setTint(0xffff66); // Яскравіший (жовтий блиск)
+                            } else {
+                                key.setTint(0xffcc00); // Темніший
+                            }
+                            bright = !bright;
+                        }
+                    });
 
                 }
             }
@@ -387,12 +442,24 @@ class GameScene extends Phaser.Scene {
             let gridX = Math.floor(point.x / this.cellSize);
             let gridY = Math.floor(point.y / this.cellSize);
             
-            if (this.grid[gridY] && this.grid[gridY][gridX]===2){
-                
-                this.stepSound.stop();
-                this.lesSound.stop();
-                this.scene.start('WinScene');
+            if (this.grid[gridY] && this.grid[gridY][gridX]===2 ){
+                if (this.countKes === 2){
+                    this.stepSound.stop();
+                    this.lesSound.stop();
+                    this.scene.start('WinScene');
+                }else {this.closeDorSound.play({volume: volumeLevel});}
 
+            }
+            if (this.grid[gridY] && this.grid[gridY][gridX]===3){
+                
+                this.grid[gridY][gridX] = 0;
+                const keyObj = this.keySprites.find(key => key.x === gridX && key.y === gridY);
+                if (keyObj) {
+                    keyObj.sprite.destroy();
+                }
+                this.countKes++;
+                this.upkeySound.play({volume: volumeLevel});
+                this.forUpdateCountKeys.setText(this.countKes + "/2");
             }
             else return this.grid[gridY] && this.grid[gridY][gridX] === 0;
 
