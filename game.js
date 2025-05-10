@@ -241,23 +241,17 @@ class GameScene extends Phaser.Scene {
         });
 
         //керування пальцем по єкрану
-        this.touchVector = null;
-
-        this.input.on('pointerdown', (pointer) => {
-            this.touchVector = { x: pointer.x, y: pointer.y };
-        });
-
-        this.input.on('pointermove', (pointer) => {
-            if (this.touchVector) {
-                this.touchVector = {
-                    x: pointer.x - this.player.x,
-                    y: pointer.y - this.player.y
-                };
-            }
-        });
-
-        this.input.on('pointerup', () => {
-            this.touchVector = null;
+        this.input.addPointer(3);
+        this.joystick = this.plugins.get('rexVirtualJoystick').add(this, {
+            x: 100,
+            y: 600,
+            radius: 60,
+            base: this.add.circle(0, 0, 60, 0x888888),
+            thumb: this.add.circle(0, 0, 25, 0xcccccc),
+            // опціонально: добавити накладення
+            dir: '8dir', // або '360'
+            forceMin: 10,
+            enable: true
         });
         
     }
@@ -458,11 +452,10 @@ class GameScene extends Phaser.Scene {
                 this.glowEffect.setRotation(Phaser.Math.DegToRad(90));
             }
             // тут треба реалізувати тач керування
-            // let moveX = 0;
-            // let moveY = 0;
+            let force = this.joystick.force;
+            let angle = this.joystick.angle;
 
-            if (this.touchVector) {
-                const angle = Math.atan2(this.touchVector.y, this.touchVector.x);
+            if (force > 0) {
                 const speed = 4;
 
                 moveX = Math.cos(angle) * speed;
@@ -492,12 +485,7 @@ class GameScene extends Phaser.Scene {
                 if (!this.stepSound.isPlaying) {
                     this.stepSound.play(this.SoundSettings);
                 }
-            } else {
-                // зупинка анімації коли немає дотику
-                this.player.anims.stop();
-                this.playerFeet.anims.stop();
-                this.stepSound.stop();
-            }
+            } 
 
             
         } 
@@ -784,7 +772,17 @@ const config = {
         width: 1280,
         height: 720
     },
-    scene: [MenuScene, GameScene, WinScene]
+    input: {
+        activePointers: 3 // або просто `{}` — для підтримки multitouch
+    },
+    scene: [MenuScene, GameScene, WinScene],
+    plugins: {
+        global: [{
+            key: 'rexVirtualJoystick',
+            plugin: window.rexvirtualjoystickplugin,
+            start: true
+        }]
+    }
 
 };
 
