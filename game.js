@@ -1,4 +1,5 @@
 let firstPosTramble = 0;
+let textOFForON = "OFF"
 class MenuScene extends Phaser.Scene {
     constructor() {
         super('MenuScene');
@@ -66,14 +67,17 @@ class GameScene extends Phaser.Scene {
         }
 
         this.load.image('btnMiniOptions', 'assets/HUD/btnMiniOptions.png');
-        this.load.image('backgroundGamePlace', 'assets/floor44.png');
-        this.load.image('wallTexture', 'assets/foliage33.png');
-        this.load.image ('door', 'assets/door.png');
+        this.load.image('fogTexture', 'assets/fog.png');
+        this.load.image({key: 'backgroundGamePlace', url: 'assets/floor44.png', normalMap: 'assets/floor44_n.png'});
+        this.load.image({key: 'wallTexture', url: 'assets/foliage33.png', normalMap: 'assets/foliage33_n.png'});
+        this.load.image('door', 'assets/door.png');
         this.load.image('light', 'assets/light.png');
+        this.load.image('lightMask', 'assets/light2.png');
         this.load.image('backgroundPause', 'assets/HUD/BackMiniMenu.png');
         this.load.image('btnContinue', 'assets/HUD/btnContinue.png');
         this.load.image('btnOptions', 'assets/HUD/btnOptions.png');
         this.load.image('btnArrowBack', 'assets/HUD/arrowBack.png');
+        this.load.image('btnFullScreen', 'assets/HUD/btnFullScrean.png');
         this.load.image('imgSoundEffects', 'assets/HUD/SoundEffects.png');
         this.load.image('BtnExitPause', 'assets/HUD/btnExit2.png');
         this.load.image('hudMonitor', 'assets/HUD/hud_monitor.png');
@@ -87,13 +91,14 @@ class GameScene extends Phaser.Scene {
     }
   
     create() {
+        this.flickerTime = 0;
         this.keySprites = [];
         this.countKes = 0;
         this.stepSound = this.sound.add('steps');
-        this.lesSound = this.sound.add('les');
+        this.lesSound = this.sound.add('les', {volume: volumeLevel, loop: true});
         this.upkeySound = this.sound.add('upkey');
         this.closeDorSound = this.sound.add('closedor');
-        this.lesSound.play({volume: volumeLevel});
+        this.lesSound.play();
         let idlePlayerFrame = [];
         let movePlayerFrame = [];
         let movePlayerFeetFrame = [];
@@ -143,21 +148,26 @@ class GameScene extends Phaser.Scene {
         //рисуем бек фон по всей области
         for (let countX = 0; countX < bgTilesX; countX++) {
             for (let countY = 0; countY < bgTilesY; countY++) {
-                this.add.image(
+                this.add.sprite(
                     countX * 204,
                     countY * 204,
                     'backgroundGamePlace'
-                ).setOrigin(0, 0).setScale(0.2).setTint(0xFAEBD7); 
+                ).setOrigin(0, 0).setScale(0.2).setPipeline('Light2D'); 
             }
         }
         
+        this.fog = this.add.tileSprite(0, 0, this.scale.width, this.scale.height, 'fogTexture')
+            .setOrigin(0)
+            .setAlpha(0.1)
+            .setScale(4)
+            .setDepth(1000); // Розміщуємо поверх усього
 
         this.drawMaze();
    
         this.playerFeet = this.add.sprite(this.cellSize / 2, this.cellSize * 1.5);
 
-        this.glowEffect = this.add.image(this.cellSize / 2 + 85, this.cellSize * 1.5, 'light');
-        this.glowEffect.setScale(0.3); 
+        this.glowEffect = this.add.image(this.cellSize / 2 + 80, this.cellSize * 1.5, 'light');
+        this.glowEffect.setScale(0.1); 
         this.glowEffect.setAlpha(0.2); // Прозрачность
         this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
 
@@ -173,9 +183,15 @@ class GameScene extends Phaser.Scene {
         this.cameras.main.setZoom(1.7);
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
+
+        //фонарик
+        this.lights.enable().setAmbientColor(0x555555); // Налаштування фонового освітлення;
+        this.playerLight = this.lights.addLight(this.player.x + 90, this.player.y, 250).setIntensity(2.0);
+        //фонарик 
+        
         this.btnMiniOptions = this.add.image(this.scale.width / 4.6, this.scale.height / 4.6, 'btnMiniOptions')
             .setAlpha(0.7)
-            .setOrigin(0, 0)        // якорь в левом верхнем углу
+            .setOrigin(0, 0) 
             .setScrollFactor(0)
             .setScale(this.cellSize / 150)
             .setInteractive()
@@ -184,7 +200,7 @@ class GameScene extends Phaser.Scene {
             .on('pointerdown', () => {this.pauseGame(); this.btnMiniOptions.disableInteractive(); this.pause = true;});
         
         //hudMonitor
-        // счетчик уровня
+        // счетчик уровня, ключей
         this.add.image(this.scale.width / 2, this.scale.height / 4.3, 'hudMonitor')
             .setAlpha(0.6)      
             .setScrollFactor(0)
@@ -205,14 +221,45 @@ class GameScene extends Phaser.Scene {
         }).setOrigin(0.5) 
             .setScrollFactor(0)
             .setScale(this.cellSize / 80);
-        
+        //hudMonitor
+
+        this.scale.on('enterfullscreen', () => {
+            textOFForON = "ON";
+            this.forbtnFullScreen.setText(textOFForON);
+        });
+    
+        this.scale.on('leavefullscreen', () => {
+            textOFForON = "OFF";
+            this.forbtnFullScreen.setText(textOFForON);
+        });
+
         this.keybtn = this.input.keyboard.addKeys({
             up: Phaser.Input.Keyboard.KeyCodes.UP,
             down: Phaser.Input.Keyboard.KeyCodes.DOWN,
             left: Phaser.Input.Keyboard.KeyCodes.LEFT,
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT
         });
-    
+
+        //керування пальцем по єкрану
+        this.touchVector = null;
+
+        this.input.on('pointerdown', (pointer) => {
+            this.touchVector = { x: pointer.x, y: pointer.y };
+        });
+
+        this.input.on('pointermove', (pointer) => {
+            if (this.touchVector) {
+                this.touchVector = {
+                    x: pointer.x - this.player.x,
+                    y: pointer.y - this.player.y
+                };
+            }
+        });
+
+        this.input.on('pointerup', () => {
+            this.touchVector = null;
+        });
+        
     }
 
     generateMaze(cols, rows) {
@@ -241,6 +288,7 @@ class GameScene extends Phaser.Scene {
                 currentCell = stack.pop();
             }
         }
+
         // Додаємо два ключі в лабіринт
         let keysPlaced = 0;
         let keynum = 2;
@@ -285,14 +333,17 @@ class GameScene extends Phaser.Scene {
                     .setDisplaySize(this.cellSize, this.cellSize)
                     .setAlpha(0.8); // полупрозрачная тень
                     shadow.setTint(0x409459);
+                    shadow.setPipeline('Light2D');
     
                     // Основное изображение
-                    const wall = this.add.image(
+                    const wall = this.add.sprite(
                         x * this.cellSize + this.cellSize / 2,
                         y * this.cellSize + this.cellSize / 2,
                         'wallTexture'
                     ).setDisplaySize(this.cellSize, this.cellSize);
-                    //wall.setTint(0x00FF11);
+                    //wall.setTint(0x00FF11); 
+                    wall.setPipeline('Light2D');
+                    //wall.setNormalMap('wallTexture_n');
                 }
 
                 if (this.grid[y][x] === 2) {
@@ -302,7 +353,7 @@ class GameScene extends Phaser.Scene {
                         y * this.cellSize + this.cellSize / 2,
                         'door'
                     ).setDisplaySize(this.cellSize, this.cellSize);
-                    door.setTint(0x868686);
+                    door.setTint(0x868686).setPipeline('Light2D');
 
                 } 
                 if (this.grid[y][x] === 3) {
@@ -315,7 +366,7 @@ class GameScene extends Phaser.Scene {
                     this.keySprites.push({sprite: key, y, x});
 
                     let bright = true;
-
+                    
                     // Анімація яскравості через зміну tint
                     this.time.addEvent({
                         delay: 800,
@@ -339,6 +390,13 @@ class GameScene extends Phaser.Scene {
         
         let moveX = 0, moveY = 0;
         this.SoundSettings = { volume: volumeLevel, rate: 1.2, seek: 0.5 };
+        //для миготіння фонарика
+        this.flickerTime += 0.1;
+        const flicker = 1.8 + Math.sin(this.flickerTime) * 0.2;
+        this.playerLight.setIntensity(flicker);
+        //анімація туману
+        this.fog.tilePositionX += 0.1;
+        this.fog.tilePositionY += 0.05;
 
         if (this.pause == false){
             
@@ -353,7 +411,7 @@ class GameScene extends Phaser.Scene {
                 this.player.setRotation(Phaser.Math.DegToRad(90)); // Поворот вниз
                 this.playerFeet.play('feetmove', true);
                 this.playerFeet.setRotation(Phaser.Math.DegToRad(90));
-                this.glowEffect.setPosition(this.player.x, this.player.y + 85);
+                this.glowEffect.setPosition(this.player.x, this.player.y + 55);
                 this.glowEffect.setRotation(Phaser.Math.DegToRad(0));
                 
             } else if (this.keybtn.up.isDown) {
@@ -367,7 +425,7 @@ class GameScene extends Phaser.Scene {
                 this.player.setRotation(Phaser.Math.DegToRad(-90)); // Поворот вверх
                 this.playerFeet.play('feetmove', true);
                 this.playerFeet.setRotation(Phaser.Math.DegToRad(-90));
-                this.glowEffect.setPosition(this.player.x, this.player.y - 85);
+                this.glowEffect.setPosition(this.player.x, this.player.y - 55);
                 this.glowEffect.setRotation(Phaser.Math.DegToRad(180));
             }
         
@@ -383,7 +441,7 @@ class GameScene extends Phaser.Scene {
                 this.player.setRotation(Phaser.Math.DegToRad(0)); // Поворот вправо
                 this.playerFeet.play('feetmove', true);
                 this.playerFeet.setRotation(Phaser.Math.DegToRad(0));
-                this.glowEffect.setPosition(this.player.x + 85, this.player.y);
+                this.glowEffect.setPosition(this.player.x + 55, this.player.y);
                 this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
             } else if (this.keybtn.left.isDown) {
                 moveX = -4;
@@ -396,9 +454,51 @@ class GameScene extends Phaser.Scene {
                 this.player.setRotation(Phaser.Math.DegToRad(180)); // Поворот влево
                 this.playerFeet.play('feetmove', true);
                 this.playerFeet.setRotation(Phaser.Math.DegToRad(180));
-                this.glowEffect.setPosition(this.player.x - 85, this.player.y);
+                this.glowEffect.setPosition(this.player.x - 55, this.player.y);
                 this.glowEffect.setRotation(Phaser.Math.DegToRad(90));
             }
+            // тут треба реалізувати тач керування
+            // let moveX = 0;
+            // let moveY = 0;
+
+            if (this.touchVector) {
+                const angle = Math.atan2(this.touchVector.y, this.touchVector.x);
+                const speed = 4;
+
+                moveX = Math.cos(angle) * speed;
+                moveY = Math.sin(angle) * speed;
+
+                // this.player.x += moveX;
+                // this.player.y += moveY;
+                // this.playerFeet.x += moveX;
+                // this.playerFeet.y += moveY;
+                // this.glowEffect.x += moveX;
+                // this.glowEffect.y += moveY;
+
+                this.player.rotation = angle;
+                this.playerFeet.rotation = angle;
+
+                // орієнтація світла
+                const offset = 55;
+                this.glowEffect.setPosition(
+                    this.player.x + Math.cos(angle) * offset,
+                    this.player.y + Math.sin(angle) * offset
+                );
+                this.glowEffect.setRotation(angle + Phaser.Math.DegToRad(270));
+
+                this.player.play('walk', true);
+                this.playerFeet.play('feetmove', true);
+
+                if (!this.stepSound.isPlaying) {
+                    this.stepSound.play(this.SoundSettings);
+                }
+            } else {
+                // зупинка анімації коли немає дотику
+                this.player.anims.stop();
+                this.playerFeet.anims.stop();
+                this.stepSound.stop();
+            }
+
             
         } 
     
@@ -412,8 +512,9 @@ class GameScene extends Phaser.Scene {
         
         let newX = this.player.x + moveX;
         let newY = this.player.y + moveY;
-        // Обновляем позицию круга для подсветки
-        //this.glowEffect.setPosition(this.player.x + 25, this.player.y);
+       
+        this.playerLight.x = this.player.x;
+        this.playerLight.y = this.player.y;
 
         if (this.checkCollision(newX, newY)) {
             this.player.x = newX;
@@ -578,9 +679,35 @@ class GameScene extends Phaser.Scene {
                 this.sliderLine.destroy();
                 sliderThumbX = this.jetSliderThumb.x;
                 this.jetSliderThumb.destroy();
-                this.imgSoundEffects.destroy()
+                this.imgSoundEffects.destroy();
+                this.btnFullScreen.destroy();
+                this.forbtnFullScreen.destroy();
                 this.pauseGame();
             });
+        //btnFullScreen
+
+        this.btnFullScreen = this.add.image(this.scale.width / 2.2, this.scale.height / 2, 'btnFullScreen')
+            .setOrigin(0, 0)
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 80)
+            .setInteractive()
+            .on('pointerover', function () {this.setTint(0xB8860B);})
+            .on('pointerout',  function () {this.clearTint();})
+            .on('pointerdown', () => {
+                if (this.scale.isFullscreen) {
+                    this.scale.stopFullscreen(); 
+                } else {
+                    this.scale.startFullscreen(); 
+                }   
+            });
+        this.forbtnFullScreen = this.add.text(this.scale.width / 1.95, this.scale.height / 1.94, textOFForON, {
+            fontSize: '24px',
+            color: '#000000',
+            fontFamily: 'Inknut Antiqua',
+            align: 'center'
+        }).setOrigin(0.5) 
+            .setScrollFactor(0)
+            .setScale(this.cellSize / 100);
         
     }
 }
@@ -650,7 +777,7 @@ class WinScene extends Phaser.Scene {
 }
 
 const config = {
-    type: Phaser.AUTO,
+    type: Phaser.WEBGL,
     scale: {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -658,6 +785,7 @@ const config = {
         height: 720
     },
     scene: [MenuScene, GameScene, WinScene]
+
 };
 
 const game = new Phaser.Game(config);
