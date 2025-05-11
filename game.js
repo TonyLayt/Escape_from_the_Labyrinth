@@ -128,11 +128,11 @@ class GameScene extends Phaser.Scene {
         let cameraZoom = 1.7;
 
         if (this.sys.game.device.os.android || this.sys.game.device.os.iOS) {
-            alert ("запущенно на Мобильке")
+            //alert ("запущенно на Мобильке")
             //cameraZoom = 2;
             
         } else {
-            alert ("запущенно на ПК!")
+            //alert ("запущенно на ПК!")
             visibleJostik = false;
         }
         
