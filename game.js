@@ -89,6 +89,28 @@ class GameScene extends Phaser.Scene {
         
 
     }
+
+    enableHUDDragging(element) {
+        element.setInteractive({ draggable: true });
+    
+        element.on('drag', (pointer, dragX, dragY) => {
+            element.x = dragX;
+            element.y = dragY;
+        });
+    
+        element.on('dragend', () => {
+            const screenWidth = this.scale.width;
+            const screenHeight = this.scale.height;
+    
+            const xDivider = (element.x !== 0) ? (screenWidth / element.x).toFixed(2) : '∞';
+            const yDivider = (element.y !== 0) ? (screenHeight / element.y).toFixed(2) : '∞';
+    
+            console.log(`🟦 New HUD position:
+        X = ${element.x}, Y = ${element.y}
+        ➤ screenWidth / ${xDivider} ≈ ${element.x}
+        ➤ screenHeight / ${yDivider} ≈ ${element.y}`);
+        });
+    }
   
     create() {
         this.flickerTime = 0;
@@ -102,6 +124,19 @@ class GameScene extends Phaser.Scene {
         let idlePlayerFrame = [];
         let movePlayerFrame = [];
         let movePlayerFeetFrame = [];
+        let visibleJostik = true; 
+        let cameraZoom = 1.7;
+
+        if (this.sys.game.device.os.android || this.sys.game.device.os.iOS) {
+            alert ("запущенно на Мобильке")
+            //cameraZoom = 2;
+            
+        } else {
+            alert ("запущенно на ПК!")
+            visibleJostik = false;
+        }
+        
+
         for (let i = 1; i <= 19; i++) {
             movePlayerFrame.push({ key: `frameMove${i}` });
             movePlayerFeetFrame.push({ key: `frameMoveFeet${i}` });
@@ -180,7 +215,7 @@ class GameScene extends Phaser.Scene {
 
         //камера
         this.cameras.main.setBounds(0, 0, mapWidth, mapHeight);
-        this.cameras.main.setZoom(1.7);
+        this.cameras.main.setZoom(cameraZoom);
         this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
 
@@ -189,16 +224,16 @@ class GameScene extends Phaser.Scene {
         this.playerLight = this.lights.addLight(this.player.x + 90, this.player.y, 250).setIntensity(2.0);
         //фонарик 
         
-        this.btnMiniOptions = this.add.image(this.scale.width / 4.6, this.scale.height / 4.6, 'btnMiniOptions')
+        this.btnMiniOptions = this.add.image(this.scale.width / 4.47, this.scale.height / 4.34, 'btnMiniOptions')
             .setAlpha(0.7)
-            .setOrigin(0, 0) 
+            .setOrigin(0.5) 
             .setScrollFactor(0)
             .setScale(this.cellSize / 150)
             .setInteractive()
             .on('pointerover', function () {this.setTint(0xBDBDBD);})
             .on('pointerout', function () {this.clearTint();})
             .on('pointerdown', () => {this.pauseGame(); this.btnMiniOptions.disableInteractive(); this.pause = true;});
-        
+
         //hudMonitor
         // счетчик уровня, ключей
         this.add.image(this.scale.width / 2, this.scale.height / 4.3, 'hudMonitor')
@@ -241,18 +276,19 @@ class GameScene extends Phaser.Scene {
         });
 
         //керування пальцем по єкрану
-        this.input.addPointer(3);
         this.joystick = this.plugins.get('rexVirtualJoystick').add(this, {
-            x: 100,
-            y: 600,
+            x: this.scale.width / 1.4,
+            y: this.scale.height / 1.5,
             radius: 60,
-            base: this.add.circle(0, 0, 60, 0x888888),
-            thumb: this.add.circle(0, 0, 25, 0xcccccc),
+            base: this.add.circle(0, 0, 60, 0x888888).setAlpha(0.1),
+            thumb: this.add.circle(0, 0, 25, 0xcccccc).setAlpha(0.1),
             // опціонально: добавити накладення
             dir: '8dir', // або '360'
             forceMin: 10,
+            fixed: true,
             enable: true
         });
+        this.joystick.setVisible(visibleJostik);
         
     }
 
@@ -453,25 +489,17 @@ class GameScene extends Phaser.Scene {
             }
             // тут треба реалізувати тач керування
             let force = this.joystick.force;
-            let angle = this.joystick.angle;
+            let angleDeg = this.joystick.angle;              // градуси
+            let angle = Phaser.Math.DegToRad(angleDeg);      // перетворюємо у радіани
 
-            if (force > 0) {
-                const speed = 4;
-
+            if (force > 10) {
+                const speed = 2;
                 moveX = Math.cos(angle) * speed;
                 moveY = Math.sin(angle) * speed;
-
-                // this.player.x += moveX;
-                // this.player.y += moveY;
-                // this.playerFeet.x += moveX;
-                // this.playerFeet.y += moveY;
-                // this.glowEffect.x += moveX;
-                // this.glowEffect.y += moveY;
 
                 this.player.rotation = angle;
                 this.playerFeet.rotation = angle;
 
-                // орієнтація світла
                 const offset = 55;
                 this.glowEffect.setPosition(
                     this.player.x + Math.cos(angle) * offset,
@@ -485,7 +513,7 @@ class GameScene extends Phaser.Scene {
                 if (!this.stepSound.isPlaying) {
                     this.stepSound.play(this.SoundSettings);
                 }
-            } 
+            }
 
             
         } 
@@ -772,9 +800,7 @@ const config = {
         width: 1280,
         height: 720
     },
-    input: {
-        activePointers: 3 // або просто `{}` — для підтримки multitouch
-    },
+
     scene: [MenuScene, GameScene, WinScene],
     plugins: {
         global: [{
@@ -787,7 +813,6 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
-
 
 function addButtonEffects(button) {
     button.on('pointerover', () => button.setScale(0.6).setTint(0xB8860B));

@@ -7,6 +7,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Inknut+Antiqua:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser3-rex-plugins/dist/rexvirtualjoystickplugin.min.js"></script>
+    <style>
+        @media (hover: none) and (pointer: coarse) {
+            html, body {
+                margin: 0;
+                padding: 0;
+                overflow: hidden;
+                height: 100%;
+                background-color: black;
+            }
+    
+            canvas {
+                display: block;
+                width: 100% !important;
+                height: 100% !important;
+            }
+        }
+    </style>
 </head>
 <body>
     <script src="game.js"></script>
