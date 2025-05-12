@@ -113,6 +113,7 @@ class GameScene extends Phaser.Scene {
     }
   
     create() {
+        this.visibleJostik = true;
         this.flickerTime = 0;
         this.keySprites = [];
         this.countKes = 0;
@@ -123,8 +124,7 @@ class GameScene extends Phaser.Scene {
         this.lesSound.play();
         let idlePlayerFrame = [];
         let movePlayerFrame = [];
-        let movePlayerFeetFrame = [];
-        let visibleJostik = true; 
+        let movePlayerFeetFrame = []; 
         let cameraZoom = 1.7;
 
         if (this.sys.game.device.os.android || this.sys.game.device.os.iOS) {
@@ -132,8 +132,7 @@ class GameScene extends Phaser.Scene {
             //cameraZoom = 2;
             
         } else {
-            //alert ("запущенно на ПК!")
-            visibleJostik = false;
+            this.visibleJostik = false;
         }
         
 
@@ -275,21 +274,53 @@ class GameScene extends Phaser.Scene {
             right: Phaser.Input.Keyboard.KeyCodes.RIGHT
         });
 
-        //керування пальцем по єкрану
-        this.joystick = this.plugins.get('rexVirtualJoystick').add(this, {
-            x: this.scale.width / 1.4,
-            y: this.scale.height / 1.5,
-            radius: 60,
-            base: this.add.circle(0, 0, 60, 0x888888).setAlpha(0.1),
-            thumb: this.add.circle(0, 0, 25, 0xcccccc).setAlpha(0.1),
-            // опціонально: добавити накладення
-            dir: '8dir', // або '360'
-            forceMin: 10,
-            fixed: true,
-            enable: true
-        });
-        this.joystick.setVisible(visibleJostik);
-        
+        //керування пальцем по єкрану адаптація під адроїд
+        if (this.visibleJostik){
+            this.activeDirection = { up: false, down: false, left: false, right: false };
+
+            // Закріплені кнопки (setScrollFactor(0)) у правому нижньому куті
+            const size = 40;
+            const spacing = 0;
+            const offsetX = this.scale.width / 1.42; // правий край зліва направо
+            const offsetY = this.scale.height / 1.5; // нижній край згори вниз
+
+            const style = {
+                fontSize: '14px',
+                color: '#ffffff',
+                fontFamily: 'Arial'
+            };
+
+            this.arrowKeys = {
+                up: this.add.container(offsetX + size, offsetY, [
+                    this.add.rectangle(0, 0, size, size, 0x555555, 0.3),
+                    this.add.text(0, 0, '↑', style).setOrigin(0.5).setAlpha(0.4)
+                ]).setSize(size, size).setInteractive().setScrollFactor(0),
+
+                down: this.add.container(offsetX + size, offsetY + size + spacing, [
+                    this.add.rectangle(0, 0, size, size, 0x555555, 0.3),
+                    this.add.text(0, 0, '↓', style).setOrigin(0.5).setAlpha(0.4)
+                ]).setSize(size, size).setInteractive().setScrollFactor(0),
+
+                left: this.add.container(offsetX, offsetY + size + spacing, [
+                    this.add.rectangle(0, 0, size, size, 0x555555, 0.3),
+                    this.add.text(0, 0, '←', style).setOrigin(0.5).setAlpha(0.4)
+                ]).setSize(size, size).setInteractive().setScrollFactor(0),
+
+                right: this.add.container(offsetX + 2 * size + spacing, offsetY + size + spacing, [
+                    this.add.rectangle(0, 0, size, size, 0x555555, 0.3),
+                    this.add.text(0, 0, '→', style).setOrigin(0.5).setAlpha(0.4)
+                ]).setSize(size, size).setInteractive().setScrollFactor(0)
+            };
+
+            // Обробка натискань
+            for (let dir in this.arrowKeys) {
+                const key = this.arrowKeys[dir];
+                key.on('pointerdown', () => this.activeDirection[dir] = true);
+                key.on('pointerup', () => this.activeDirection[dir] = false);
+                key.on('pointerout', () => this.activeDirection[dir] = false);
+            }
+
+        }
     }
 
     generateMaze(cols, rows) {
@@ -487,35 +518,70 @@ class GameScene extends Phaser.Scene {
                 this.glowEffect.setPosition(this.player.x - 55, this.player.y);
                 this.glowEffect.setRotation(Phaser.Math.DegToRad(90));
             }
+            
             // тут треба реалізувати тач керування
-            let force = this.joystick.force;
-            let angleDeg = this.joystick.angle;              // градуси
-            let angle = Phaser.Math.DegToRad(angleDeg);      // перетворюємо у радіани
-
-            if (force > 10) {
-                const speed = 2;
-                moveX = Math.cos(angle) * speed;
-                moveY = Math.sin(angle) * speed;
-
-                this.player.rotation = angle;
-                this.playerFeet.rotation = angle;
-
-                const offset = 55;
-                this.glowEffect.setPosition(
-                    this.player.x + Math.cos(angle) * offset,
-                    this.player.y + Math.sin(angle) * offset
-                );
-                this.glowEffect.setRotation(angle + Phaser.Math.DegToRad(270));
-
-                this.player.play('walk', true);
-                this.playerFeet.play('feetmove', true);
-
-                if (!this.stepSound.isPlaying) {
+            if (this.visibleJostik){
+                 if (this.activeDirection.up){
+                moveY = -4;
+                
+                if (!this.stepSound.isPlaying){
                     this.stepSound.play(this.SoundSettings);
                 }
-            }
 
-            
+                this.player.play('walk', true); // Запускаем анимацию
+                this.player.setRotation(Phaser.Math.DegToRad(-90)); // Поворот вверх
+                this.playerFeet.play('feetmove', true);
+                this.playerFeet.setRotation(Phaser.Math.DegToRad(-90));
+                this.glowEffect.setPosition(this.player.x, this.player.y - 55);
+                this.glowEffect.setRotation(Phaser.Math.DegToRad(180));
+
+                }  
+            if (this.activeDirection.down){
+                moveY = 4;
+
+                if (!this.stepSound.isPlaying){
+                    this.stepSound.play(this.SoundSettings);
+                }
+      
+                this.player.play('walk', true); // Запускаем анимацию
+                this.player.setRotation(Phaser.Math.DegToRad(90)); // Поворот вниз
+                this.playerFeet.play('feetmove', true);
+                this.playerFeet.setRotation(Phaser.Math.DegToRad(90));
+                this.glowEffect.setPosition(this.player.x, this.player.y + 55);
+                this.glowEffect.setRotation(Phaser.Math.DegToRad(0));
+
+                }
+            if (this.activeDirection.left) {
+                moveX = -4;
+
+                if (!this.stepSound.isPlaying){
+                    this.stepSound.play(this.SoundSettings);
+                }
+                
+                this.player.play('walk', true); // Запускаем анимацию
+                this.player.setRotation(Phaser.Math.DegToRad(180)); // Поворот влево
+                this.playerFeet.play('feetmove', true);
+                this.playerFeet.setRotation(Phaser.Math.DegToRad(180));
+                this.glowEffect.setPosition(this.player.x - 55, this.player.y);
+                this.glowEffect.setRotation(Phaser.Math.DegToRad(90));
+
+                }
+            if (this.activeDirection.right) {
+                moveX = 4;
+
+                if (!this.stepSound.isPlaying){
+                    this.stepSound.play(this.SoundSettings);
+                }
+                
+                this.player.play('walk', true); // Запускаем анимацию
+                this.player.setRotation(Phaser.Math.DegToRad(0)); // Поворот вправо
+                this.playerFeet.play('feetmove', true);
+                this.playerFeet.setRotation(Phaser.Math.DegToRad(0));
+                this.glowEffect.setPosition(this.player.x + 55, this.player.y);
+                this.glowEffect.setRotation(Phaser.Math.DegToRad(-90));
+                }
+            }
+               
         } 
     
         // Остановка анимации, если персонаж не двигается
@@ -802,13 +868,6 @@ const config = {
     },
 
     scene: [MenuScene, GameScene, WinScene],
-    plugins: {
-        global: [{
-            key: 'rexVirtualJoystick',
-            plugin: window.rexvirtualjoystickplugin,
-            start: true
-        }]
-    }
 
 };
 
