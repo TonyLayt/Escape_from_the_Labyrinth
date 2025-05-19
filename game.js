@@ -402,9 +402,9 @@ class GameScene extends Phaser.Scene {
             this.activeDirection = { up: false, down: false, left: false, right: false };
 
             // Закріплені кнопки (setScrollFactor(0)) у правому нижньому куті
-            const size = 40;
-            const spacing = 0;
-            const offsetX = this.scale.width / 1.42; // правий край зліва направо
+            const size = 55;
+            const spacing = 2;
+            const offsetX = this.scale.width / 1.47; // правий край зліва направо
             const offsetY = this.scale.height / 1.5; // нижній край згори вниз
 
             const style = {
@@ -424,7 +424,7 @@ class GameScene extends Phaser.Scene {
                     this.add.text(0, 0, '↓', style).setOrigin(0.5).setAlpha(0.4)
                 ]).setSize(size, size).setInteractive().setScrollFactor(0),
 
-                left: this.add.container(offsetX, offsetY + size + spacing, [
+                left: this.add.container(offsetX - spacing, offsetY + size + spacing, [
                     this.add.rectangle(0, 0, size, size, 0x555555, 0.3),
                     this.add.text(0, 0, '←', style).setOrigin(0.5).setAlpha(0.4)
                 ]).setSize(size, size).setInteractive().setScrollFactor(0),
@@ -644,7 +644,7 @@ class GameScene extends Phaser.Scene {
             
             // тут треба реалізувати тач керування
             if (this.visibleJostik){
-                 if (this.activeDirection.up){
+                if (this.activeDirection.up){
                 moveY = -4;
                 
                 if (!this.stepSound.isPlaying){
@@ -938,7 +938,7 @@ class WinScene extends Phaser.Scene {
         this.add.image(this.scale.width / 2, this.scale.height / 2, 'backgroundGameWin')
             .setDisplaySize(1280, 720);
         
-        this.add.text(this.scale.width / 2.2, this.scale.height / 2.65, numlvl, {
+        this.add.text(this.scale.width / 1.69, this.scale.height / 1.88, numlvl, {
             fontSize: '24px',
             color: '#000000',
             fontFamily: 'Inknut Antiqua',
@@ -946,7 +946,7 @@ class WinScene extends Phaser.Scene {
         }).setOrigin(0.5) 
             .setScale(1);
 
-        let btnNextLvl = this.add.image(this.scale.width / 2, this.scale.height / 1.5, 'btnNextLvl')
+        let btnNextLvl = this.add.image(this.scale.width / 1.98, this.scale.height / 1.34, 'btnNextLvl')
             .setInteractive()
             .setScale(0.5);
 
